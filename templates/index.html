@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>QAI Mini — Test Case Generator</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: #0f1117;
+      color: #e2e8f0;
+      min-height: 100vh;
+    }
+
+    /* ── Header ── */
+    header {
+      background: linear-gradient(135deg, #1a1f2e 0%, #0f1117 100%);
+      border-bottom: 1px solid #2d3748;
+      padding: 24px 40px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .logo-icon {
+      width: 48px; height: 48px;
+      background: linear-gradient(135deg, #6366f1, #8b5cf6);
+      border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px; font-weight: 800; color: #fff;
+      box-shadow: 0 0 20px rgba(99,102,241,0.4);
+      flex-shrink: 0;
+    }
+
+    .logo-text h1 {
+      font-size: 22px; font-weight: 700;
+      background: linear-gradient(135deg, #a5b4fc, #c4b5fd);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .logo-text p {
+      font-size: 13px; color: #64748b; margin-top: 2px;
+    }
+
+    /* ── Main Layout ── */
+    main {
+      max-width: 1100px;
+      margin: 48px auto;
+      padding: 0 24px;
+    }
+
+    /* ── Input Card ── */
+    .input-card {
+      background: #1a1f2e;
+      border: 1px solid #2d3748;
+      border-radius: 16px;
+      padding: 32px;
+      margin-bottom: 36px;
+    }
+
+    .input-card label {
+      display: block;
+      font-size: 14px; font-weight: 600;
+      color: #94a3b8; text-transform: uppercase; letter-spacing: 0.06em;
+      margin-bottom: 12px;
+    }
+
+    textarea {
+      width: 100%;
+      background: #0f1117;
+      border: 1px solid #2d3748;
+      border-radius: 10px;
+      color: #e2e8f0;
+      font-size: 15px;
+      line-height: 1.6;
+      padding: 16px;
+      resize: vertical;
+      min-height: 110px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    textarea:focus { border-color: #6366f1; }
+    textarea::placeholder { color: #475569; }
+
+    .btn-generate {
+      margin-top: 16px;
+      background: linear-gradient(135deg, #6366f1, #8b5cf6);
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      padding: 13px 32px;
+      font-size: 15px; font-weight: 600;
+      cursor: pointer;
+      display: inline-flex; align-items: center; gap: 10px;
+      transition: opacity 0.2s, transform 0.1s;
+      box-shadow: 0 4px 20px rgba(99,102,241,0.35);
+    }
+    .btn-generate:hover:not(:disabled) { opacity: 0.9; transform: translateY(-1px); }
+    .btn-generate:disabled { opacity: 0.55; cursor: not-allowed; transform: none; }
+
+    /* ── Spinner ── */
+    .spinner {
+      width: 18px; height: 18px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      display: none;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Error ── */
+    .error-msg {
+      display: none;
+      margin-top: 14px;
+      background: rgba(239,68,68,0.1);
+      border: 1px solid rgba(239,68,68,0.35);
+      color: #fca5a5;
+      border-radius: 8px;
+      padding: 12px 16px;
+      font-size: 14px;
+    }
+
+    /* ── Results Section ── */
+    .results-section { display: none; }
+
+    .results-header {
+      display: flex; align-items: center; gap: 12px;
+      margin-bottom: 20px;
+    }
+    .results-header h2 {
+      font-size: 18px; font-weight: 600; color: #e2e8f0;
+    }
+    .results-header .badge {
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 20px;
+      padding: 3px 12px;
+      font-size: 12px; color: #94a3b8;
+    }
+
+    /* ── Table ── */
+    .table-wrapper {
+      overflow-x: auto;
+      border-radius: 14px;
+      border: 1px solid #2d3748;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+    }
+
+    thead tr {
+      background: #1e293b;
+    }
+    thead th {
+      padding: 14px 18px;
+      text-align: left;
+      font-size: 11px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.08em;
+      color: #64748b;
+      white-space: nowrap;
+    }
+
+    tbody tr {
+      border-top: 1px solid #1e293b;
+      transition: background 0.15s;
+    }
+    tbody tr:hover { filter: brightness(1.08); }
+
+    td {
+      padding: 14px 18px;
+      vertical-align: top;
+      line-height: 1.55;
+    }
+
+    /* TC_ID column */
+    td:first-child {
+      font-family: 'Courier New', monospace;
+      font-size: 13px; font-weight: 700;
+      color: #a5b4fc;
+      white-space: nowrap;
+    }
+
+    /* Steps — numbered list rendering */
+    .steps-list { list-style: none; padding: 0; }
+    .steps-list li {
+      display: flex; gap: 8px;
+      padding: 2px 0;
+    }
+    .steps-list li .step-num {
+      flex-shrink: 0;
+      background: #1e293b;
+      border-radius: 50%;
+      width: 20px; height: 20px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 10px; font-weight: 700; color: #94a3b8;
+    }
+
+    /* Priority badges */
+    .priority {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-size: 11px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.05em;
+      white-space: nowrap;
+    }
+    .priority-high   { background: rgba(239,68,68,0.15);  color: #f87171; border: 1px solid rgba(239,68,68,0.3); }
+    .priority-medium { background: rgba(245,158,11,0.15); color: #fbbf24; border: 1px solid rgba(245,158,11,0.3); }
+    .priority-low    { background: rgba(34,197,94,0.12);  color: #4ade80; border: 1px solid rgba(34,197,94,0.25); }
+
+    /* Row color coding by Type */
+    tr.type-positive { background: rgba(34, 197, 94, 0.05); }
+    tr.type-negative { background: rgba(239, 68,  68, 0.06); }
+    tr.type-boundary { background: rgba(249, 115, 22, 0.06); }
+    tr.type-security { background: rgba(168, 85, 247, 0.06); }
+    tr.type-performance { background: rgba(59, 130, 246, 0.06); }
+
+    /* Type badge */
+    .type-badge {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 6px;
+      font-size: 12px; font-weight: 600;
+      white-space: nowrap;
+    }
+    .badge-positive    { background: rgba(34,197,94,0.15);  color: #4ade80; }
+    .badge-negative    { background: rgba(239,68,68,0.15);  color: #f87171; }
+    .badge-boundary    { background: rgba(249,115,22,0.15); color: #fb923c; }
+    .badge-security    { background: rgba(168,85,247,0.15); color: #c084fc; }
+    .badge-performance { background: rgba(59,130,246,0.15); color: #60a5fa; }
+
+    /* ── Legend ── */
+    .legend {
+      display: flex; flex-wrap: wrap; gap: 14px;
+      margin-top: 20px;
+    }
+    .legend-item {
+      display: flex; align-items: center; gap: 6px;
+      font-size: 12px; color: #64748b;
+    }
+    .legend-dot {
+      width: 10px; height: 10px; border-radius: 50%;
+    }
+    .dot-positive    { background: #4ade80; }
+    .dot-negative    { background: #f87171; }
+    .dot-boundary    { background: #fb923c; }
+    .dot-security    { background: #c084fc; }
+    .dot-performance { background: #60a5fa; }
+
+    /* ── Footer ── */
+    footer {
+      text-align: center;
+      padding: 32px;
+      color: #334155;
+      font-size: 13px;
+      border-top: 1px solid #1e293b;
+      margin-top: 60px;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="logo-icon">Q</div>
+    <div class="logo-text">
+      <h1>QAI Mini</h1>
+      <p>AI-Powered Test Case Generator</p>
+    </div>
+  </header>
+
+  <main>
+
+    <!-- Input Card -->
+    <div class="input-card">
+      <label for="requirement">Requirement</label>
+      <textarea id="requirement" placeholder="e.g. User should be able to log in using valid email and password..."></textarea>
+      <div style="display:flex; align-items:center; gap:16px; flex-wrap:wrap;">
+        <button class="btn-generate" id="generateBtn" onclick="generate()">
+          <span id="btnIcon">⚡</span>
+          <span id="btnLabel">Generate Test Cases</span>
+          <div class="spinner" id="spinner"></div>
+        </button>
+      </div>
+      <div class="error-msg" id="errorMsg"></div>
+    </div>
+
+    <!-- Results Section -->
+    <div class="results-section" id="resultsSection">
+      <div class="results-header">
+        <h2>Generated Test Cases</h2>
+        <span class="badge" id="countBadge">5 cases</span>
+      </div>
+
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>TC_ID</th>
+              <th>Name</th>
+              <th>Type</th>
+              <th>Steps</th>
+              <th>Expected Result</th>
+              <th>Priority</th>
+            </tr>
+          </thead>
+          <tbody id="tableBody"></tbody>
+        </table>
+      </div>
+
+      <div class="legend">
+        <div class="legend-item"><div class="legend-dot dot-positive"></div> Positive</div>
+        <div class="legend-item"><div class="legend-dot dot-negative"></div> Negative</div>
+        <div class="legend-item"><div class="legend-dot dot-boundary"></div> Boundary</div>
+        <div class="legend-item"><div class="legend-dot dot-security"></div> Security</div>
+        <div class="legend-item"><div class="legend-dot dot-performance"></div> Performance</div>
+      </div>
+    </div>
+
+  </main>
+
+  <footer>QAI Mini &mdash; Powered by Claude AI &nbsp;|&nbsp; Built for QA Engineers</footer>
+
+  <script>
+    function formatSteps(raw) {
+      // Split on numbered steps like "1. ", "2. ", etc.
+      const parts = raw.split(/(?=\d+\.\s)/);
+      if (parts.length <= 1) return `<span>${raw}</span>`;
+
+      const items = parts
+        .map(p => p.trim())
+        .filter(p => p)
+        .map(p => {
+          const match = p.match(/^(\d+)\.\s(.+)$/s);
+          if (match) {
+            return `<li><span class="step-num">${match[1]}</span><span>${match[2]}</span></li>`;
+          }
+          return `<li><span>${p}</span></li>`;
+        })
+        .join('');
+
+      return `<ul class="steps-list">${items}</ul>`;
+    }
+
+    function getTypeClass(type) {
+      const t = type.toLowerCase();
+      if (t === 'positive')    return 'type-positive';
+      if (t === 'negative')    return 'type-negative';
+      if (t === 'boundary')    return 'type-boundary';
+      if (t === 'security')    return 'type-security';
+      if (t === 'performance') return 'type-performance';
+      return '';
+    }
+
+    function getBadgeClass(type) {
+      const t = type.toLowerCase();
+      if (t === 'positive')    return 'badge-positive';
+      if (t === 'negative')    return 'badge-negative';
+      if (t === 'boundary')    return 'badge-boundary';
+      if (t === 'security')    return 'badge-security';
+      if (t === 'performance') return 'badge-performance';
+      return '';
+    }
+
+    function getPriorityClass(priority) {
+      const p = priority.toLowerCase();
+      if (p === 'high')   return 'priority-high';
+      if (p === 'medium') return 'priority-medium';
+      if (p === 'low')    return 'priority-low';
+      return '';
+    }
+
+    function setLoading(loading) {
+      const btn     = document.getElementById('generateBtn');
+      const spinner = document.getElementById('spinner');
+      const icon    = document.getElementById('btnIcon');
+      const label   = document.getElementById('btnLabel');
+      btn.disabled      = loading;
+      spinner.style.display = loading ? 'block' : 'none';
+      icon.style.display    = loading ? 'none'  : 'inline';
+      label.textContent     = loading ? 'Generating...' : 'Generate Test Cases';
+    }
+
+    function showError(msg) {
+      const el = document.getElementById('errorMsg');
+      el.textContent = msg;
+      el.style.display = 'block';
+    }
+
+    function hideError() {
+      document.getElementById('errorMsg').style.display = 'none';
+    }
+
+    async function generate() {
+      const requirement = document.getElementById('requirement').value.trim();
+      hideError();
+
+      if (!requirement) {
+        showError('Please enter a requirement before generating.');
+        return;
+      }
+
+      setLoading(true);
+      document.getElementById('resultsSection').style.display = 'none';
+
+      try {
+        const res  = await fetch('/generate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ requirement }),
+        });
+        const data = await res.json();
+
+        if (!res.ok || data.error) {
+          showError(data.error || 'Something went wrong. Please try again.');
+          return;
+        }
+
+        const tbody = document.getElementById('tableBody');
+        tbody.innerHTML = '';
+
+        data.rows.forEach(row => {
+          const tr = document.createElement('tr');
+          tr.className = getTypeClass(row.type);
+          tr.innerHTML = `
+            <td>${row.tc_id}</td>
+            <td style="font-weight:600; color:#cbd5e1;">${row.name}</td>
+            <td><span class="type-badge ${getBadgeClass(row.type)}">${row.type}</span></td>
+            <td>${formatSteps(row.steps)}</td>
+            <td>${row.expected}</td>
+            <td><span class="priority ${getPriorityClass(row.priority)}">${row.priority}</span></td>
+          `;
+          tbody.appendChild(tr);
+        });
+
+        document.getElementById('countBadge').textContent = `${data.rows.length} cases`;
+        document.getElementById('resultsSection').style.display = 'block';
+        document.getElementById('resultsSection').scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+      } catch (err) {
+        showError('Network error. Is the Flask server running?');
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    // Allow Ctrl+Enter / Cmd+Enter to submit
+    document.getElementById('requirement').addEventListener('keydown', e => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') generate();
+    });
+  </script>
+</body>
+</html>
